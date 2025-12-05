@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Saneamento Básico</title>
+  <link rel="stylesheet" href="style1.css">
+  <!-- Chart.js para gráficos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Dashboard — Saneamento Básico</h1>
+  </header>
+
+  <section class="stats-cards">
+    <div class="card">
+      <h3>Municípios</h3>
+      <p id="total-municipios">--</p>
+    </div>
+    <div class="card">
+      <h3>Média % Saneamento</h3>
+      <p id="media-saneamento">--</p>
+    </div>
+    <div class="card">
+      <h3>População Total</h3>
+      <p id="populacao-total">--</p>
+    </div>
+  </section>
+
+  <section class="table-section">
+    <h2>Dados por Município</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Município</th>
+          <th>População</th>
+          <th>% com Saneamento</th>
+          <th>Ano</th>
+        </tr>
+      </thead>
+      <tbody id="data-table"></tbody>
+    </table>
+  </section>
+
+  <section class="chart-section">
+    <h2>Distribuição % Saneamento</h2>
+    <canvas id="saneamentoChart" style="max-width:600px;"></canvas>
+  </section>
+
+  <script src="script.js"> 
+// Dados fictícios — exemplo de saneamento
+const rawData = [
+  { municipio: 'Cidade A', populacao: 50000, saneamento: 78, ano: 2024 },
+  { municipio: 'Cidade B', populacao: 120000, saneamento: 85, ano: 2024 },
+  { municipio: 'Cidade C', populacao: 30000, saneamento: 62, ano: 2023 },
+  { municipio: 'Cidade D', populacao: 80000, saneamento: 90, ano: 2024 },
+  { municipio: 'Cidade E', populacao: 45000, saneamento: 70, ano: 2023 },
+  { municipio: 'Cidade F', populacao: 60000, saneamento: 95, ano: 2025 }
+];
+
+let filteredData = [...rawData];
+
+function populateFilters() {
+  const selYear = document.getElementById('filter-year');
+  const selMun = document.getElementById('filter-municipio');
+
+  const anos = Array.from(new Set(rawData.map(d => d.ano))).sort();
+  anos.forEach(ano => {
+    const opt = document.createElement('option');
+    opt.value = ano;
+    opt.innerText = ano;
+    selYear.appendChild(opt);
+  });
+
+  const municipios = Array.from(new Set(rawData.map(d => d.municipio))).sort();
+  municipios.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.innerText = m;
+    selMun.appendChild(opt);
+  });
+
+  selYear.onchange = applyFilters;
+  selMun.onchange = applyFilters;
+}
+
+function applyFilters() {
+  const selYear = document.getElementById('filter-year').value;
+  const selMun = document.getElementById('filter-municipio').value;
+
+  filteredData = rawData.filter(d => {
+    let ok = true;
+    if (selYear !== 'all' && d.ano.toString() !== selYear) ok = false;
+    if (selMun !== 'all' && d.municipio !== selMun) ok = false;
+    return ok;
+  });
+
+  renderTable();
+  renderStats();
+  renderChart();
+}
+
+function renderTable() {
+  const tbody = document.querySelector('#data-table tbody');
+  tbody.innerHTML = '';
+  filteredData.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.municipio}</td>
+      <td>${item.populacao.toLocaleString()}</td>
+      <td>${item.saneamento}%</td>
+      <td>${item.ano}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderStats() {
+  const total = filteredData.length;
+  const somaPop = filteredData.reduce((sum, d) => sum + d.populacao, 0);
+  const mediaSane = total > 0
+    ? (filteredData.reduce((sum, d) => sum + d.saneamento, 0) / total).toFixed(1)
+    : 0;
+
+  document.getElementById('total-municipios').innerText = total;
+  document.getElementById('populacao-total').innerText = somaPop.toLocaleString();
+  document.getElementById('media-saneamento').innerText = mediaSane + '%';
+}
+
+let chart = null;
+function renderChart() {
+  const ctx = document.getElementById('saneamentoChart').getContext('2d');
+  const labels = filteredData.map(d => d.municipio);
+  const values = filteredData.map(d => d.saneamento);
+
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: '% com Saneamento',
+        data: values,
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true, max: 100 }
+      }
+    }
+  });
+}
+
+function downloadCSV(filename = 'saneamento.csv') {
+  const rows = [
+    ['Município','População','% Saneamento','Ano'],
+    ...filteredData.map(d => [d.municipio, d.populacao, d.saneamento, d.ano])
+  ];
+  const csvContent = rows.map(r => r.join(',')).join('\\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  populateFilters();
+  applyFilters();
+  document.getElementById('btn-export').addEventListener('click', () => downloadCSV());
+});
+
+
+ 
+   
+  </script>
+</body>
+</html>
