@@ -7,8 +7,13 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
+
 app.use(cors());
 app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.send('Backend is running!');
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
